@@ -1,28 +1,34 @@
 const canvas = document.querySelector("#canvas");
-/** @type {CanvasRenderingContext2D} */
-const ctx = canvas.getContext("2d");
 
 // Constants
 const W = window.innerHeight;
 const H = window.innerHeight;
+const FG_COLOR = "#fff";
+const BG_COLOR = "#000";
 
 canvas.width = W;
 canvas.height = H;
 
 class Effect {
-	constructor(ctx, w, h, particlesNum = 70) {
-		this.ctx = ctx;
-		this.w = w;
-		this.h = h;
+	constructor(canvas, particlesNum = 70) {
+		/** @type {CanvasRenderingContext2D} */
+		this.canvas = canvas;
+		this.ctx = canvas.getContext("2d");
+		this.w = canvas.width;
+		this.h = canvas.height;
 		this.particlesNum = particlesNum;
 		this.cellSize = 20;
-		this.curve = 0.54;
-		this.zoom = 0.9;
+		this.curve = 2.2;
+		this.zoom = 0.17;
 		this.particles = [];
 		this.grid = [];
 		this.rows;
 		this.cols;
 		this.init();
+
+		window.addEventListener("resize", (e) => {
+			this.resize(e.target.innerWidth, e.target.innerHeight);
+		});
 	}
 
 	init() {
@@ -44,10 +50,22 @@ class Effect {
 	}
 
 	render() {
+		this.ctx.fillStyle = BG_COLOR;
+		this.ctx.fillRect(0, 0, this.w, this.h);
 		for (const particle of this.particles) {
 			particle.update(this.ctx);
 			particle.draw(this.ctx);
 		}
+	}
+
+	resize(w, h) {
+		this.canvas.width = w;
+		this.canvas.height = h;
+		this.w = w;
+		this.h = h;
+		this.grid = [];
+		this.particles = [];
+		this.init();
 	}
 }
 
@@ -64,10 +82,17 @@ class Particle {
 		this.speedModifier = Math.floor(Math.random() * 10);
 		this.speedX;
 		this.speedY;
+		this.color = [200, 100, 50];
 	}
 
 	update() {
-		if (this.x >= this.effect.w || this.y >= this.effect.h) this.reset();
+		if (
+			this.x >= this.effect.w ||
+			this.x <= 1 ||
+			this.y <= 1 ||
+			this.y >= this.effect.h
+		)
+			this.reset();
 		else if (this.lifeSpan >= 1) {
 			const col = Math.floor(this.y / this.effect.cellSize);
 			const row = Math.floor(this.x / this.effect.cellSize);
@@ -86,7 +111,9 @@ class Particle {
 	}
 
 	draw(ctx) {
-		ctx.strokeStyle = "#000";
+		this.color[0] = Math.floor((this.y / this.effect.h) * 360);
+		const [h, s, l] = this.color;
+		ctx.strokeStyle = `hsl(${h}, ${s}%,${l}%)`;
 		ctx.beginPath();
 		if (this.history.length > 0)
 			ctx.moveTo(this.history[0].x, this.history[0].y);
@@ -103,12 +130,10 @@ class Particle {
 	}
 }
 
-const effect = new Effect(ctx, W, H, 1200);
+const effect = new Effect(canvas, 1800);
 
 const animate = () => {
-	ctx.fillStyle = "#FFF";
-	ctx.fillRect(0, 0, W, H);
-	effect.render(ctx);
+	effect.render();
 	requestAnimationFrame(animate);
 };
 
